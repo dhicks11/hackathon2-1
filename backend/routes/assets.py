@@ -3,18 +3,16 @@ from database import supabase
 
 router = APIRouter()
 
-# GET /api/assets — list of all main entities
-@router.get("/assets")
-def get_assets():
-    res = supabase.table("assets").select("*").execute()
+@router.get("/ideas")
+def get_ideas():
+    res = supabase.table("ideas").select("*").order("created_at", desc=True).execute()
     return res.data
 
-# GET /api/assets/{id} — single entity detail
-@router.get("/assets/{asset_id}")
-def get_asset(asset_id: str):
-    res = (supabase.table("assets")
+@router.get("/ideas/{idea_id}")
+def get_idea(idea_id: str):
+    res = (supabase.table("ideas")
            .select("*")
-           .eq("id", asset_id)
+           .eq("id", idea_id)
            .single()
            .execute())
     return res.data
