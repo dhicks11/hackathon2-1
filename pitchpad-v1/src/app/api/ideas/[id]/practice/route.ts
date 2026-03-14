@@ -1,12 +1,12 @@
 // POST /api/ideas/:id/practice — upload audio, get Whisper transcript + delivery score
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getSupabaseServerClient } from '@/lib/supabase'
+import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { countFillerWords } from '@/lib/utils'
 
-const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' })
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 const IDEAL_WPM_MIN = 130
@@ -31,11 +31,11 @@ export async function POST(
 
   if (!audioFile) return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
 
-  const sb = getSupabaseServerClient()
-
   // Fetch idea so we can match keywords
-  const { data: ideaData } = await sb.from('ideas').select('title, solution, market').eq('id', params.id).single()
-  const idea = ideaData as { title: string; solution: string; market: string } | null
+  const idea = await prisma.idea.findUnique({
+    where: { id: params.id },
+    select: { title: true, solution: true, market: true }
+  })
 
   // ── Whisper transcription ─────────────────────────────────
   const transcription = await openai.audio.transcriptions.create({
@@ -47,14 +47,14 @@ export async function POST(
   const transcript = typeof transcription === 'string' ? transcription : (transcription as any).text ?? ''
 
   // ── Objective metrics ─────────────────────────────────────
-  const wordCount   = transcript.split(/\s+/).filter(Boolean).length
-  const wpm         = durationSec > 0 ? Math.round((wordCount / durationSec) * 60) : 0
+  const wordCount = transcript.split(/\s+/).filter(Boolean).length
+  const wpm = durationSec > 0 ? Math.round((wordCount / durationSec) * 60) : 0
   const fillerWords = countFillerWords(transcript)
   const pacingScore = Math.round(calcPacingScore(wpm))
 
-  const sentences      = transcript.split(/[.!?]+/).filter((s: string) => s.trim().length > 10)
+  const sentences = transcript.split(/[.!?]+/).filter((s: string) => s.trim().length > 10)
   const avgSentenceLen = sentences.length ? wordCount / sentences.length : 0
-  const clarityScore   = Math.round(Math.max(20, Math.min(100,
+  const clarityScore = Math.round(Math.max(20, Math.min(100,
     100 - Math.abs(avgSentenceLen - 18) * 2 - fillerWords * 3
   )))
 
@@ -74,13 +74,13 @@ export async function POST(
       : 50
   }
 
-  // ── Claude coaching ───────────────────────────────────────
+  // ── Claude coaching with 1-10 delivery score ─────────────
   const coachMsg = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 600,
+    max_tokens: 800,
     messages: [{
       role: 'user',
-      content: `You are a pitch delivery coach. Analyze this recorded pitch transcript.
+      content: `You are a pitch delivery coach. Analyze this recorded pitch transcript and rate the delivery.
 
 TRANSCRIPT:
 ${transcript}
@@ -89,42 +89,66 @@ METRICS:
 - Duration: ${durationSec}s | Pace: ${wpm} WPM (ideal: 130–160)
 - Filler words: ${fillerWords} | Clarity: ${clarityScore}/100 | Keywords hit: ${keywordMatch}%
 
-Give coaching feedback in 3 short paragraphs:
-1. Overall impression (1 sentence)
-2. What worked well (cite specific phrases from the transcript)
-3. Top 2 things to improve with concrete suggestions
+Respond with JSON only:
+{
+  "delivery_score": <1-10 rating>,
+  "overall": "<1 sentence overall impression>",
+  "strengths": "<what worked well, cite specific phrases>",
+  "improvements": "<top 2 things to improve with concrete suggestions>",
+  "pacing": "<pacing feedback based on WPM>"
+}
 
-Be direct, specific, and encouraging. Max 200 words.`
+Rating guide:
+1-3: Needs significant work (unclear, many fillers, poor pacing)
+4-5: Getting there (some good points but needs polish)
+6-7: Good (clear message, reasonable pacing, minor issues)
+8-9: Excellent (compelling, confident, well-paced)
+10: Outstanding (investor-ready, memorable delivery)
+
+Be direct, specific, and encouraging. Return ONLY valid JSON.`
     }],
   })
 
-  const aiFeedback = coachMsg.content[0].type === 'text' ? coachMsg.content[0].text : ''
+  const aiText = coachMsg.content[0].type === 'text' ? coachMsg.content[0].text : '{}'
+  let evaluation: any = {}
+  try {
+    evaluation = JSON.parse(aiText.replace(/```json\n?|```\n?/g, '').trim())
+  } catch {
+    evaluation = { delivery_score: 5, overall: aiText, strengths: '', improvements: '', pacing: '' }
+  }
 
   // ── Save session ──────────────────────────────────────────
-  const { data: session_record } = await (sb.from('practice_sessions') as any).insert({
-    id: crypto.randomUUID(),
-    transcript,
-    duration_sec: durationSec,
-    filler_words: fillerWords,
-    pacing_score: pacingScore,
-    clarity_score: clarityScore,
-    keyword_match: keywordMatch,
-    ai_feedback: aiFeedback,
-    idea_id: params.id,
-    user_id: session.user.id,
-  }).select().single()
+  const practiceSession = await prisma.practiceSession.create({
+    data: {
+      transcript,
+      durationSec,
+      fillerWords,
+      pacingScore,
+      clarityScore,
+      keywordMatch,
+      aiFeedback: JSON.stringify(evaluation),
+      ideaId: params.id,
+      userId: session.user.id,
+    }
+  })
 
   return NextResponse.json({
-    data: {
-      sessionId: session_record?.id,
-      transcript,
+    transcript,
+    evaluation: {
+      delivery_score: evaluation.delivery_score ?? 5,
+      overall: evaluation.overall ?? '',
+      strengths: evaluation.strengths ?? '',
+      improvements: evaluation.improvements ?? '',
+      pacing: evaluation.pacing ?? `Your pace was ${wpm} WPM`,
+    },
+    metrics: {
       durationSec,
       wpm,
       fillerWords,
       pacingScore,
       clarityScore,
       keywordMatch,
-      aiFeedback,
-    }
+    },
+    sessionId: practiceSession.id,
   })
 }

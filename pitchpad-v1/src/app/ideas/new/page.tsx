@@ -2,32 +2,62 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api, getUserFromStorage } from '@/lib/api'
+import { useSession } from 'next-auth/react'
 
 export default function NewIdeaPage() {
   const router = useRouter()
-  const [step, setStep]           = useState(1)
-  const [title, setTitle]         = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory]   = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-  const user = getUserFromStorage()
+  const { data: session, status } = useSession()
+  const [step, setStep] = useState(1)
+  const [title, setTitle] = useState('')
+  const [problem, setProblem] = useState('')
+  const [solution, setSolution] = useState('')
+  const [market, setMarket] = useState('')
+  const [ask, setAsk] = useState('')
+  const [tags, setTags] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  async function submit(asDraft = false) {
-    if (!title || !description) { setError('Title and description are required'); return }
-    setLoading(true); setError('')
+  // Redirect if not authenticated
+  if (status === 'loading') {
+    return <div style={{ padding: 40, color: '#999', fontSize: 13 }}>Loading…</div>
+  }
+  if (status === 'unauthenticated') {
+    router.push('/auth/login')
+    return null
+  }
+
+  async function submit() {
+    if (!title || !problem || !solution || !market) {
+      setError('Title, problem, solution, and market are required')
+      return
+    }
+    setLoading(true)
+    setError('')
     try {
-      const result = await api.ideas.submit({
-        user_id: user?.user_id ?? '',
-        title,
-        description,
-        category,
+      const res = await fetch('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          problem,
+          solution,
+          market,
+          ask: ask || undefined,
+          tags: tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          status: 'SUBMITTED',
+          visibility: 'TEAM',
+        }),
       })
-      router.push(`/ideas/${result.idea?.[0]?.id ?? result.idea?.id}`)
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error?.fieldErrors ? 'Please fill all required fields with enough detail' : data.error || 'Submission failed')
+      }
+      router.push(`/ideas/${data.id}`)
     } catch (err: any) {
       setError(err.message ?? 'Submission failed')
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -40,7 +70,7 @@ export default function NewIdeaPage() {
 
       {/* Progress */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 32 }}>
-        {[1,2,3].map(s => (
+        {[1, 2, 3].map(s => (
           <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: step >= s ? '#E2001A' : '#E6E6E6', transition: 'background 0.3s' }} />
         ))}
       </div>
@@ -56,21 +86,28 @@ export default function NewIdeaPage() {
                 value={title} onChange={e => setTitle(e.target.value)} autoFocus />
             </div>
             <div>
-              <label className="lv-label">Category</label>
+              <label className="lv-label">Tags (comma-separated)</label>
               <input className="lv-input" placeholder="e.g. AI, hardware, sustainability"
-                value={category} onChange={e => setCategory(e.target.value)} />
+                value={tags} onChange={e => setTags(e.target.value)} />
             </div>
           </div>
         )}
 
         {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <p style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Step 2 — Describe your idea</p>
+            <p style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Step 2 — Problem & Solution</p>
             <div>
-              <label className="lv-label">Full description *</label>
-              <textarea className="lv-input" rows={8}
-                placeholder="Describe the problem you're solving, your solution, target market, and why now. The more detail you provide, the better the AI feedback will be."
-                value={description} onChange={e => setDescription(e.target.value)}
+              <label className="lv-label">Problem Statement *</label>
+              <textarea className="lv-input" rows={4}
+                placeholder="What problem does this idea solve? Who experiences this problem?"
+                value={problem} onChange={e => setProblem(e.target.value)}
+                style={{ resize: 'vertical', lineHeight: 1.7 }} />
+            </div>
+            <div>
+              <label className="lv-label">Proposed Solution *</label>
+              <textarea className="lv-input" rows={4}
+                placeholder="How does your idea solve this problem? What makes it unique?"
+                value={solution} onChange={e => setSolution(e.target.value)}
                 style={{ resize: 'vertical', lineHeight: 1.7 }} />
             </div>
           </div>
@@ -78,15 +115,30 @@ export default function NewIdeaPage() {
 
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <p style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Step 3 — Review & submit</p>
-            <div className="lv-card" style={{ padding: 20, background: '#F8F8F8' }}>
+            <p style={{ fontSize: 12, color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Step 3 — Market & Ask</p>
+            <div>
+              <label className="lv-label">Target Market *</label>
+              <textarea className="lv-input" rows={3}
+                placeholder="Who would use this? What's the market size and opportunity?"
+                value={market} onChange={e => setMarket(e.target.value)}
+                style={{ resize: 'vertical', lineHeight: 1.7 }} />
+            </div>
+            <div>
+              <label className="lv-label">Your Ask (optional)</label>
+              <textarea className="lv-input" rows={2}
+                placeholder="What do you need? Funding, team members, resources?"
+                value={ask} onChange={e => setAsk(e.target.value)}
+                style={{ resize: 'vertical', lineHeight: 1.7 }} />
+            </div>
+            <div className="lv-card" style={{ padding: 16, background: '#F8F8F8', marginTop: 8 }}>
               <p style={{ fontSize: 13, fontWeight: 500, color: '#111', marginBottom: 8 }}>{title}</p>
-              {category && <p style={{ fontSize: 11, color: '#E2001A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>{category}</p>}
-              <p style={{ fontSize: 13, color: '#666', lineHeight: 1.7 }}>{description}</p>
+              {tags && <p style={{ fontSize: 11, color: '#E2001A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{tags}</p>}
+              <p style={{ fontSize: 12, color: '#666', marginBottom: 4 }}><strong>Problem:</strong> {problem.slice(0, 100)}...</p>
+              <p style={{ fontSize: 12, color: '#666' }}><strong>Solution:</strong> {solution.slice(0, 100)}...</p>
             </div>
             <div style={{ padding: 14, background: '#FFF0F2', borderRadius: 4, border: '1px solid #F5B8C0' }}>
               <p style={{ fontSize: 12, color: '#E2001A', margin: 0 }}>
-                ⚡ After submitting, AI will automatically score your idea on clarity, feasibility, and impact.
+                ⚡ After submitting, your idea will be visible to reviewers for feedback.
               </p>
             </div>
           </div>

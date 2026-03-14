@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { signIn } from 'next-auth/react'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
@@ -16,10 +17,30 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(''); setLoading(true)
     try {
-      await api.auth.signup(email, password)
+      // Register via API route
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name || email.split('@')[0], email, password, role: 'CREATOR' }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Registration failed')
+      }
+
       // Auto login after signup
-      await api.auth.login(email, password)
-      router.push('/dashboard')
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Account created but login failed. Please try logging in.')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setError(err.message ?? 'Registration failed')
     } finally { setLoading(false) }
@@ -40,13 +61,18 @@ export default function RegisterPage() {
 
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div>
+              <label className="lv-label">Name</label>
+              <input type="text" className="lv-input" placeholder="Your name"
+                value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
+            </div>
+            <div>
               <label className="lv-label">Email address</label>
               <input type="email" className="lv-input" placeholder="you@example.com"
                 value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div>
               <label className="lv-label">Password</label>
-              <input type="password" className="lv-input" placeholder="Min 6 characters"
+              <input type="password" className="lv-input" placeholder="Min 8 characters"
                 value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" />
             </div>
 

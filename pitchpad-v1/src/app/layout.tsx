@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from 'sonner'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
   title: { default: 'PitchPad — Lenovo Innovation', template: '%s | PitchPad' },
@@ -11,7 +12,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
         <Toaster position="top-right" toastOptions={{ style: { background:'#fff', border:'1px solid #E6E6E6', color:'#333', fontFamily:'IBM Plex Sans, sans-serif', fontSize:'13px', borderRadius:'4px' } }} />
       </body>
     </html>
