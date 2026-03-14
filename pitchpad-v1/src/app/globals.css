@@ -39,6 +39,9 @@
   }
 
   body { min-height: 100vh; background: var(--lv-gray-50); }
+  @supports (height: 100dvh) {
+    body { min-height: 100dvh; }
+  }
   ::selection { background: rgba(226,0,26,0.12); color: var(--lv-gray-900); }
   :focus-visible { outline: 2px solid var(--lv-red); outline-offset: 2px; }
 
@@ -99,4 +102,46 @@
   @keyframes recording-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(226,0,26,0.4); } 50% { box-shadow: 0 0 0 12px rgba(226,0,26,0); } }
   @keyframes pulse-dot { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
   .lv-alert-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lv-red); display: inline-block; animation: pulse-dot 2s ease-in-out infinite; }
+}
+
+/* Landing page responsiveness */
+@media (max-width: 1024px) {
+  .lp-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+    padding: 64px 20px !important;
+  }
+  .lp-flow {
+    order: 2;
+  }
+  .lp-nav-row {
+    flex-wrap: wrap;
+    height: auto !important;
+    padding: 10px 16px !important;
+    gap: 10px;
+  }
+  .lp-subnav-row {
+    height: auto !important;
+    flex-wrap: wrap;
+    padding: 8px 16px !important;
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .lp-hero h1 {
+    font-size: 32px !important;
+  }
+  .lp-promo-grid,
+  .lp-feature-grid,
+  .lp-support-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .lp-features {
+    padding: 40px 16px 48px !important;
+  }
+  .lp-nav .lv-btn {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+  }
 }

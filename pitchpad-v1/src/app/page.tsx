@@ -13,8 +13,8 @@ export default async function HomePage() {
       <div style={{ height: 3, background: '#E2001A' }} />
 
       {/* Nav */}
-      <nav style={{ borderBottom: '1px solid #E6E6E6', background: '#fff' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav className="lp-nav" style={{ borderBottom: '1px solid #E6E6E6', background: '#fff' }}>
+        <div className="lp-nav-row" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 18, height: 18, background: '#E2001A', borderRadius: 1 }} />
             <span style={{ fontFamily: 'IBM Plex Sans', fontWeight: 600, fontSize: 15, color: '#111', letterSpacing: '-0.02em' }}>PitchPad</span>
@@ -25,8 +25,8 @@ export default async function HomePage() {
             <Link href="/auth/register" className="lv-btn lv-btn-primary lv-btn-sm">Get started</Link>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid #F2F2F2' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 40, display: 'flex', alignItems: 'center', gap: 18, color: '#666', fontSize: 12 }}>
+        <div className="lp-subnav" style={{ borderTop: '1px solid #F2F2F2' }}>
+          <div className="lp-subnav-row" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 40, display: 'flex', alignItems: 'center', gap: 18, color: '#666', fontSize: 12 }}>
             <span style={{ fontWeight: 600, color: '#111' }}>Solutions</span>
             <span>Idea Intake</span>
             <span>Reviewer Portal</span>
@@ -38,8 +38,8 @@ export default async function HomePage() {
       </nav>
 
       {/* Hero */}
-      <section style={{ background: '#F8F8F8', borderBottom: '1px solid #E6E6E6' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+      <section className="lp-hero" style={{ background: '#F8F8F8', borderBottom: '1px solid #E6E6E6' }}>
+        <div className="lp-hero-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
           <div className="anim-fade-up">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 12px', background: '#FFF0F2', borderRadius: 2, marginBottom: 24 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#E2001A' }} />
@@ -58,7 +58,7 @@ export default async function HomePage() {
           </div>
 
           {/* Flow diagram */}
-          <div className="anim-fade-up anim-stagger-2" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div className="anim-fade-up anim-stagger-2 lp-flow" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {[
               { n: '01', label: 'Submit Idea',     desc: '6-step guided form',            color: '#E2001A' },
               { n: '02', label: 'Get Feedback',    desc: 'Rubric scoring from reviewers', color: '#FF8800' },
@@ -83,8 +83,8 @@ export default async function HomePage() {
       </section>
 
       {/* Promo band */}
-      <section style={{ background: '#fff', borderBottom: '1px solid #E6E6E6' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <section className="lp-promo" style={{ background: '#fff', borderBottom: '1px solid #E6E6E6' }}>
+        <div className="lp-promo-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {[
             { title: 'Fast-track reviews', desc: 'Standardize feedback with a 4-factor rubric and clear next steps.' },
             { title: 'Executive-ready decks', desc: 'Generate consistent slide decks and export instantly.' },
@@ -101,8 +101,8 @@ export default async function HomePage() {
       </section>
 
       {/* Feature tiles */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 24px 64px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+      <section className="lp-features" style={{ maxWidth: 1200, margin: '0 auto', padding: '56px 24px 64px' }}>
+        <div className="lp-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
           {[
             { icon: '◈', title: 'Creator & Reviewer Roles', desc: 'Two-role system - creators develop ideas, reviewers score on 4 dimensions with public/private/anonymous modes.' },
             { icon: '◉', title: 'Structured Scoring',        desc: 'Clarity, Market Fit, Innovation, and Execution scores plus written coaching notes.' },
@@ -122,8 +122,8 @@ export default async function HomePage() {
       </section>
 
       {/* Support strip */}
-      <section style={{ borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', background: '#F8F8F8' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '18px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <section className="lp-support" style={{ borderTop: '1px solid #E6E6E6', borderBottom: '1px solid #E6E6E6', background: '#F8F8F8' }}>
+        <div className="lp-support-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '18px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {[
             { label: 'Secure by design', value: 'Role-based access and audit-ready data' },
             { label: 'Enterprise ready', value: 'SSO and team controls when enabled' },
