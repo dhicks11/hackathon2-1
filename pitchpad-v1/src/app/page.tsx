@@ -51,7 +51,7 @@ export default async function HomePage() {
             <p style={{ fontSize: 15, color: '#666', lineHeight: 1.7, marginBottom: 32, maxWidth: 440 }}>
               Submit your innovation. Get structured reviewer feedback with rubric scoring. Let AI generate your pitch deck. Then practice aloud with Whisper coaching.
             </p>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div className="lp-hero-cta" style={{ display: 'flex', gap: 12 }}>
               <Link href="/auth/register" className="lv-btn lv-btn-primary" style={{ padding: '12px 28px', fontSize: 14 }}>Submit your first idea</Link>
               <Link href="/auth/login" className="lv-btn lv-btn-outline" style={{ padding: '12px 28px', fontSize: 14 }}>Reviewer login</Link>
             </div>
@@ -65,7 +65,7 @@ export default async function HomePage() {
               { n: '03', label: 'AI Pitch Deck',   desc: 'Claude generates 8 slides',     color: '#0066CC' },
               { n: '04', label: 'Voice Practice',  desc: 'Whisper + AI coaching',         color: '#00875A' },
             ].map((step, i) => (
-              <div key={step.n} style={{ display: 'flex', gap: 0 }}>
+              <div key={step.n} className="lp-step" style={{ display: 'flex', gap: 0 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 2, background: step.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontFamily: 'IBM Plex Mono', fontSize: 11, color: '#fff', fontWeight: 500 }}>{step.n}</span>
