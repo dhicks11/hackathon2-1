@@ -6,7 +6,7 @@ import { getSupabaseServerClient } from '@/lib/supabase'
 import { createAlert } from '@/lib/alerts'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 const SYSTEM_PROMPT = `You are an expert pitch consultant for Lenovo's PitchPad platform.
 Given an idea and reviewer feedback, generate an 8-slide investor pitch deck.
@@ -38,19 +38,21 @@ export async function POST(
 
   const sb = getSupabaseServerClient()
 
-  const { data: idea } = await sb.from('ideas').select('*').eq('id', params.id).single()
+  const { data: ideaData } = await sb.from('ideas').select('*').eq('id', params.id).single()
+  const idea = ideaData as { id: string; author_id: string; title: string; problem: string; solution: string; market: string; ask?: string } | null
   if (!idea) return NextResponse.json({ error: 'Idea not found' }, { status: 404 })
   if (idea.author_id !== session.user.id && session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data: feedbacks } = await sb
+  const { data: feedbacksData } = await sb
     .from('feedbacks')
     .select('content, score_clarity, score_market, score_innovation, score_execution')
     .eq('idea_id', params.id)
     .in('visibility', ['TEAM', 'PUBLIC'])
     .order('created_at', { ascending: false })
     .limit(8)
+  const feedbacks = feedbacksData as { content: string; score_clarity?: number; score_market?: number; score_innovation?: number; score_execution?: number }[] | null
 
   const feedbackText = feedbacks?.length
     ? feedbacks.map((f, i) =>
@@ -73,21 +75,15 @@ export async function POST(
   const deckData = JSON.parse(text.replace(/```json\n?|```\n?/g, '').trim())
 
   // Upsert pitch deck
-  const { data: existing } = await sb.from('pitch_decks')
+  const { data: existingData } = await sb.from('pitch_decks')
     .select('id, version').eq('idea_id', params.id)
     .order('version', { ascending: false }).limit(1).single()
+  const existing = existingData as { id: string; version: number } | null
 
   if (existing) {
-    await sb.from('pitch_decks')
-      .update({ slides: deckData.slides, version: existing.version + 1 })
-      .eq('id', existing.id)
+    await (sb.from('pitch_decks') as any).update({ slides: deckData.slides, version: existing.version + 1 }).eq('id', existing.id)
   } else {
-    await sb.from('pitch_decks').insert({
-      id: crypto.randomUUID(),
-      idea_id: params.id,
-      slides: deckData.slides,
-      version: 1,
-    })
+    await (sb.from('pitch_decks') as any).insert({ id: crypto.randomUUID(), idea_id: params.id, slides: deckData.slides, version: 1 })
   }
 
   // Notify creator

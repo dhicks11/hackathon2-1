@@ -30,11 +30,13 @@ export async function POST(req: NextRequest) {
   const sb = getSupabaseServerClient()
 
   // Verify idea exists
-  const { data: idea } = await sb.from('ideas').select('*').eq('id', parsed.data.ideaId).single()
+  const { data: ideaData } = await sb.from('ideas').select('*').eq('id', parsed.data.ideaId).single()
+  const idea = ideaData as { id: string; status: string; author_id: string; title: string } | null
   if (!idea) return NextResponse.json({ error: 'Idea not found' }, { status: 404 })
   if (idea.status === 'DRAFT') return NextResponse.json({ error: 'Cannot review a draft' }, { status: 400 })
 
   // Insert feedback
+  // @ts-ignore - feedbacks table not in generated types
   const { data: feedback, error } = await sb.from('feedbacks').insert({
     id: crypto.randomUUID(),
     idea_id: parsed.data.ideaId,
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
 
   // Update idea status
   if (idea.status === 'SUBMITTED') {
+    // @ts-ignore - ideas table not in generated types
     await sb.from('ideas').update({ status: 'IN_REVIEW' }).eq('id', idea.id)
   }
 

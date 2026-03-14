@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
   const sb = getSupabaseServerClient()
-  const { data, error } = await sb.from('ideas').insert({
+  const { data, error } = await (sb.from('ideas') as any).insert({
     id: crypto.randomUUID(),
     author_id: session.user.id,
     ...parsed.data,

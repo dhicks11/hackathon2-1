@@ -3,8 +3,8 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase'
 
-const url  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const url  = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
 
 // Browser client (singleton pattern)
 let browserClient: ReturnType<typeof createClient<Database>> | null = null
@@ -19,7 +19,7 @@ export function getSupabaseBrowserClient() {
 
 // Server client (service role — API routes only, never expose to browser)
 export function getSupabaseServerClient() {
-  return createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient<Database>(url, process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder', {
     auth: { autoRefreshToken: false, persistSession: false },
   })
 }

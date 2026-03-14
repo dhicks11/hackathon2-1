@@ -12,7 +12,7 @@ export async function GET(
 
   const sb = getSupabaseServerClient()
 
-  const { data: idea, error } = await sb
+  const { data: ideaData, error } = await sb
     .from('ideas')
     .select(`
       *,
@@ -27,6 +27,8 @@ export async function GET(
     `)
     .eq('id', params.id)
     .single()
+
+  const idea = ideaData as any
 
   if (error || !idea) {
     return NextResponse.json({ error: 'Idea not found' }, { status: 404 })

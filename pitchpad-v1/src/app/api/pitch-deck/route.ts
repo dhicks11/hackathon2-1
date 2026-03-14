@@ -6,7 +6,7 @@ import { createAlert } from '@/lib/alerts'
 import Anthropic from '@anthropic-ai/sdk'
 import type { PitchSlide } from '@/types'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 const SYSTEM_PROMPT = `You are an expert pitch deck consultant for Lenovo's PitchPad innovation platform.
 Given an idea and reviewer feedback, generate an 8-slide investor pitch deck.
@@ -38,13 +38,14 @@ export async function POST(req: NextRequest) {
   const { ideaId } = await req.json()
   const sb = getSupabaseServerClient()
 
-  const { data: idea } = await sb.from('ideas').select('*').eq('id', ideaId).single()
+  const { data: ideaData } = await sb.from('ideas').select('*').eq('id', ideaId).single()
+  const idea = ideaData as any
   if (!idea) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (idea.author_id !== session.user.id && session.user.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data: feedbacks } = await sb.from('feedbacks')
+  const { data: feedbacks } = await (sb.from('feedbacks') as any)
     .select('content, score_clarity, score_market')
     .eq('idea_id', ideaId)
     .in('visibility', ['TEAM', 'PUBLIC'])
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     .limit(8)
 
   const feedbackSummary = feedbacks?.length
-    ? feedbacks.map((f, i) =>
+    ? feedbacks.map((f: any, i: number) =>
         `Reviewer ${i + 1}: ${f.content}` +
         (f.score_clarity ? ` (Clarity: ${f.score_clarity}/5, Market: ${f.score_market}/5)` : '')
       ).join('\n\n')
@@ -82,13 +83,14 @@ Generate the 8-slide pitch deck JSON now.`.trim()
   const deckData = JSON.parse(clean) as { slides: PitchSlide[] }
 
   // Upsert pitch deck
-  const { data: existing } = await sb.from('pitch_decks')
+  const { data: existingData } = await sb.from('pitch_decks')
     .select('id, version').eq('idea_id', ideaId).order('version', { ascending: false }).limit(1).single()
+  const existing = existingData as { id: string; version: number } | null
 
   if (existing) {
-    await sb.from('pitch_decks').update({ slides: deckData.slides as any, version: existing.version + 1 }).eq('id', existing.id)
+    await (sb.from('pitch_decks') as any).update({ slides: deckData.slides, version: existing.version + 1 }).eq('id', existing.id)
   } else {
-    await sb.from('pitch_decks').insert({ id: crypto.randomUUID(), idea_id: ideaId, slides: deckData.slides as any, version: 1 })
+    await (sb.from('pitch_decks') as any).insert({ id: crypto.randomUUID(), idea_id: ideaId, slides: deckData.slides, version: 1 })
   }
 
   // Alert the creator

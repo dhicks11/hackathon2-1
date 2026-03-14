@@ -5,8 +5,8 @@ import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { countFillerWords } from '@/lib/utils'
 
-const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const openai   = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 // Ideal pacing: 130–160 WPM for presentations
 const IDEAL_WPM_MIN = 130
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const pacingScore = Math.round(calcPacingScore(wpm))
 
   // Clarity proxy: sentences / paragraph-like structure
-  const sentences   = transcript.split(/[.!?]+/).filter(s => s.trim().length > 10)
+  const sentences   = transcript.split(/[.!?]+/).filter((s: string) => s.trim().length > 10)
   const avgSentenceLen = sentences.length ? wordCount / sentences.length : 0
   const clarityScore = Math.round(Math.max(20, Math.min(100,
     100 - Math.abs(avgSentenceLen - 18) * 2 - fillerWords * 3

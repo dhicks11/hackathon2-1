@@ -103,20 +103,21 @@ export default function VizPage() {
     async function load() {
       const sb = getSupabaseBrowserClient()
 
-      const [{ count: ic }, { count: fc }, { data: fbData }] = await Promise.all([
+      const [{ count: ic }, { count: fc }, { data: fbDataRaw }] = await Promise.all([
         sb.from('ideas').select('*', { count: 'exact', head: true }),
         sb.from('feedbacks').select('*', { count: 'exact', head: true }),
         sb.from('feedbacks').select('score_clarity,score_market,score_innovation,score_execution,created_at'),
       ])
+      const fbData = fbDataRaw as any[]
       setIdeaCount(ic ?? 0)
       setFeedbackCount(fc ?? 0)
 
       if (fbData && fbData.length > 0) {
         // Compute averages
-        const avgC = fbData.reduce((s, f) => s + (f.score_clarity ?? 0), 0) / fbData.length
-        const avgM = fbData.reduce((s, f) => s + (f.score_market ?? 0), 0) / fbData.length
-        const avgI = fbData.reduce((s, f) => s + (f.score_innovation ?? 0), 0) / fbData.length
-        const avgE = fbData.reduce((s, f) => s + (f.score_execution ?? 0), 0) / fbData.length
+        const avgC = fbData.reduce((s: number, f: any) => s + (f.score_clarity ?? 0), 0) / fbData.length
+        const avgM = fbData.reduce((s: number, f: any) => s + (f.score_market ?? 0), 0) / fbData.length
+        const avgI = fbData.reduce((s: number, f: any) => s + (f.score_innovation ?? 0), 0) / fbData.length
+        const avgE = fbData.reduce((s: number, f: any) => s + (f.score_execution ?? 0), 0) / fbData.length
         const overall = [avgC, avgM, avgI, avgE].filter(Boolean)
         setAvgScore(overall.length ? overall.reduce((a,b) => a+b,0)/overall.length : 0)
 
@@ -161,10 +162,11 @@ export default function VizPage() {
       }
 
       // Status distribution
-      const { data: ideas } = await sb.from('ideas').select('status')
+      const { data: ideasRaw } = await sb.from('ideas').select('status')
+      const ideas = ideasRaw as any[]
       if (ideas) {
         const counts: Record<string,number> = {}
-        ideas.forEach(i => { counts[i.status] = (counts[i.status]??0)+1 })
+        ideas.forEach((i: any) => { counts[i.status] = (counts[i.status]??0)+1 })
         const total = ideas.length || 1
         setStatusDist([
           { label: 'Draft',     count: counts['DRAFT']??0,     color: '#999' },

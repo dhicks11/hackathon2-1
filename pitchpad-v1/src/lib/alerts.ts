@@ -11,7 +11,7 @@ export async function createAlert(params: {
   ideaId?: string
 }) {
   const sb = getSupabaseServerClient()
-  await sb.from('alerts').insert({
+  await (sb.from('alerts') as any).insert({
     id: crypto.randomUUID(),
     user_id: params.userId,
     type: params.type,
