@@ -39,7 +39,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     MicrosoftEntraID({
       clientId: process.env.AZURE_AD_CLIENT_ID!,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      tenantId: process.env.AZURE_AD_TENANT_ID,
+      // Use 'common' for multi-tenant (any Microsoft account),
+      // 'organizations' for work/school accounts only,
+      // or specific tenant ID for single-tenant
+      tenantId: process.env.AZURE_AD_TENANT_ID || 'common',
       authorization: {
         params: { scope: 'openid profile email User.Read' },
       },
