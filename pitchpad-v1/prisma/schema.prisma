@@ -1,0 +1,166 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth (NextAuth v5) ──────────────────────────────────────
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(CREATOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  ideas         Idea[]
+  feedbacks     Feedback[]
+  practiceSessions PracticeSession[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Idea ────────────────────────────────────────────────────
+model Idea {
+  id          String      @id @default(cuid())
+  title       String
+  problem     String      @db.Text
+  solution    String      @db.Text
+  market      String      @db.Text
+  ask         String?     @db.Text
+  tags        String[]    @default([])
+  status      IdeaStatus  @default(DRAFT)
+  visibility  Visibility  @default(PRIVATE)
+  pitchScore  Int?        // 0-100 AI readiness score
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  feedbacks       Feedback[]
+  pitchDecks      PitchDeck[]
+  practiceSessions PracticeSession[]
+
+  @@index([authorId])
+  @@index([status])
+}
+
+// ─── Feedback ────────────────────────────────────────────────
+model Feedback {
+  id          String         @id @default(cuid())
+  content     String         @db.Text
+  visibility  Visibility     @default(PRIVATE)
+  isAnonymous Boolean        @default(false)
+  // Dimension scores 1–5
+  scoreclarity    Int?
+  scoreMarket     Int?
+  scoreInnovation Int?
+  scoreExecution  Int?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  ideaId      String
+  idea        Idea           @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  reviewerId  String
+  reviewer    User           @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+// ─── Pitch Deck ──────────────────────────────────────────────
+model PitchDeck {
+  id        String   @id @default(cuid())
+  slides    Json     // Array of slide objects
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+
+  ideaId    String
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+}
+
+// ─── Voice Practice ──────────────────────────────────────────
+model PracticeSession {
+  id           String   @id @default(cuid())
+  transcript   String   @db.Text
+  durationSec  Int
+  fillerWords  Int      @default(0)
+  pacingScore  Int?     // 0-100
+  clarityScore Int?     // 0-100
+  keywordMatch Int?     // 0-100: % of pitch keywords spoken
+  aiFeedback   String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  ideaId  String
+  idea    Idea   @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+  @@index([userId])
+}
+
+// ─── Enums ───────────────────────────────────────────────────
+enum UserRole {
+  CREATOR
+  REVIEWER
+  ADMIN
+}
+
+enum IdeaStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  COMPLETE
+}
+
+enum Visibility {
+  PRIVATE
+  TEAM
+  PUBLIC
+}
