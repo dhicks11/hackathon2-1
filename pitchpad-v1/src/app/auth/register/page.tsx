@@ -86,14 +86,14 @@ export default function RegisterPage() {
 
             <button type="submit" disabled={loading} className="lv-btn lv-btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}>
-              {loading ? 'Creating account...' : 'Create account ->'}
+              {loading ? 'Creating account...' : 'Create account \u2192'}
             </button>
           </form>
 
           <div style={{ borderTop: '1px solid #E6E6E6', margin: '24px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#999' }}>
             <span>Have an account?</span>
-            <Link href="/auth/login" style={{ color: '#E2001A', textDecoration: 'none' }}>Sign in -></Link>
+            <Link href="/auth/login" style={{ color: '#E2001A', textDecoration: 'none' }}>Sign in &rarr;</Link>
           </div>
         </div>
       </div>
