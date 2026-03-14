@@ -40,7 +40,7 @@ export default function TopNav() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
         <div style={{ height: 52, display: 'flex', alignItems: 'center', gap: 32 }}>
           {/* Logo */}
-          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', flexShrink: 0 }}>
             <div style={{ width: 16, height: 16, background: '#E2001A', borderRadius: 1 }} />
             <span style={{ fontFamily: 'IBM Plex Sans', fontWeight: 600, fontSize: 14, color: '#111', letterSpacing: '-0.02em' }}>PitchPad</span>
           </Link>
