@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
-from database import supabase
+from database import get_supabase
 from services.scoring import (
     score_idea, generate_pitch_summary,
     transcribe_audio, score_pitch_delivery
@@ -32,6 +32,9 @@ class LoginInput(BaseModel):
 @router.post("/auth/login")
 def login(credentials: LoginInput):
     try:
+        supabase = get_supabase()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Supabase not configured")
         res = supabase.auth.sign_in_with_password({
             "email": credentials.email,
             "password": credentials.password
@@ -48,6 +51,9 @@ def login(credentials: LoginInput):
 @router.post("/auth/signup")
 def signup(credentials: LoginInput):
     try:
+        supabase = get_supabase()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Supabase not configured")
         res = supabase.auth.sign_up({
             "email": credentials.email,
             "password": credentials.password
@@ -61,11 +67,17 @@ def signup(credentials: LoginInput):
 
 @router.get("/auth/profile/{user_id}")
 def get_profile(user_id: str):
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
     res = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
     return res.data
 @router.post("/ideas")
 def submit_idea(idea: IdeaInput):
     try:
+        supabase = get_supabase()
+        if not supabase:
+            raise HTTPException(status_code=500, detail="Supabase not configured")
         result = score_idea(idea.title, idea.description)
 
         res = supabase.table("ideas").insert({
@@ -84,6 +96,9 @@ def submit_idea(idea: IdeaInput):
 
 @router.post("/feedback")
 def submit_feedback(fb: FeedbackInput):
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
     res = supabase.table("feedback").insert({
         "idea_id":     fb.idea_id,
         "reviewer_id": fb.reviewer_id,
@@ -94,6 +109,9 @@ def submit_feedback(fb: FeedbackInput):
 
 @router.post("/ideas/{idea_id}/pitch")
 def generate_pitch(idea_id: str):
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
     idea = supabase.table("ideas").select("*").eq("id", idea_id).single().execute().data
     feedback_rows = supabase.table("feedback").select("content").eq("idea_id", idea_id).execute().data
     feedback_list = [f["content"] for f in feedback_rows]
@@ -109,6 +127,9 @@ def generate_pitch(idea_id: str):
 
 @router.post("/ideas/{idea_id}/practice")
 async def practice_pitch(idea_id: str, audio: UploadFile = File(...)):
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
     idea = supabase.table("ideas").select("*").eq("id", idea_id).single().execute().data
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:

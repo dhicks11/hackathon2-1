@@ -1,10 +1,14 @@
-from fastapi import APIRouter
-from database import supabase
+from fastapi import APIRouter, HTTPException
+from database import get_supabase
 
 router = APIRouter()
 
 @router.get("/metrics")
 def get_metrics():
+    supabase = get_supabase()
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+
     ideas    = supabase.table("ideas").select("*").execute().data
     feedback = supabase.table("feedback").select("*").execute().data
     attempts = supabase.table("pitch_attempts").select("*").execute().data
