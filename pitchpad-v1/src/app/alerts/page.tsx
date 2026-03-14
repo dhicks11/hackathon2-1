@@ -51,6 +51,7 @@ export default function AlertsPage() {
   }
 
   async function markRead(id: string) {
+    // @ts-ignore
    await (sb.from('alerts') as any).update({ read: true }).eq('id', id)
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a))
   }
