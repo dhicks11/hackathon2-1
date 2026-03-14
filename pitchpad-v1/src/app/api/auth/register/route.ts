@@ -8,17 +8,20 @@ const schema = z.object({
   name:     z.string().min(2),
   email:    z.string().email(),
   password: z.string().min(8),
-  role:     z.enum(['CREATOR', 'REVIEWER']),
+  role:     z.enum(['CREATOR', 'REVIEWER']).optional(),
 })
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { name, email, password, role } = parsed.data
+  const name = parsed.data.name.trim()
+  const email = parsed.data.email.toLowerCase().trim()
+  const password = parsed.data.password
+  const role = parsed.data.role ?? 'CREATOR'
 
   const exists = await prisma.user.findUnique({ where: { email } })
   if (exists) {
