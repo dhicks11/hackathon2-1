@@ -1,13 +1,10 @@
-// POST /api/ideas/:id/practice — upload audio, get Whisper transcript + delivery score
+// POST /api/ideas/:id/practice - upload audio, get Whisper transcript + delivery score
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { countFillerWords } from '@/lib/utils'
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' })
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 const IDEAL_WPM_MIN = 130
 const IDEAL_WPM_MAX = 160
@@ -25,19 +22,29 @@ export async function POST(
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const openaiApiKey = process.env.OPENAI_API_KEY
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY
+  if (!openaiApiKey) {
+    return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+  }
+  if (!anthropicApiKey) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+  }
+
+  const openai = new OpenAI({ apiKey: openaiApiKey })
+  const anthropic = new Anthropic({ apiKey: anthropicApiKey })
+
   const formData = await req.formData()
   const audioFile = formData.get('audio') as File | null
-  const durationSec = parseInt(formData.get('duration') as string ?? '0', 10)
+  const durationSec = parseInt((formData.get('duration') as string) ?? '0', 10)
 
   if (!audioFile) return NextResponse.json({ error: 'No audio file provided' }, { status: 400 })
 
-  // Fetch idea so we can match keywords
   const idea = await prisma.idea.findUnique({
     where: { id: params.id },
-    select: { title: true, solution: true, market: true }
+    select: { title: true, solution: true, market: true },
   })
 
-  // ── Whisper transcription ─────────────────────────────────
   const transcription = await openai.audio.transcriptions.create({
     file: audioFile,
     model: 'whisper-1',
@@ -46,7 +53,6 @@ export async function POST(
   })
   const transcript = typeof transcription === 'string' ? transcription : (transcription as any).text ?? ''
 
-  // ── Objective metrics ─────────────────────────────────────
   const wordCount = transcript.split(/\s+/).filter(Boolean).length
   const wpm = durationSec > 0 ? Math.round((wordCount / durationSec) * 60) : 0
   const fillerWords = countFillerWords(transcript)
@@ -58,7 +64,6 @@ export async function POST(
     100 - Math.abs(avgSentenceLen - 18) * 2 - fillerWords * 3
   )))
 
-  // Keyword match — compare transcript against idea keywords
   let keywordMatch = 50
   if (idea) {
     const keywords = [
@@ -74,7 +79,6 @@ export async function POST(
       : 50
   }
 
-  // ── Claude coaching with 1-10 delivery score ─────────────
   const coachMsg = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 800,
@@ -86,7 +90,7 @@ TRANSCRIPT:
 ${transcript}
 
 METRICS:
-- Duration: ${durationSec}s | Pace: ${wpm} WPM (ideal: 130–160)
+- Duration: ${durationSec}s | Pace: ${wpm} WPM (ideal: 130-160)
 - Filler words: ${fillerWords} | Clarity: ${clarityScore}/100 | Keywords hit: ${keywordMatch}%
 
 Respond with JSON only:
@@ -117,7 +121,6 @@ Be direct, specific, and encouraging. Return ONLY valid JSON.`
     evaluation = { delivery_score: 5, overall: aiText, strengths: '', improvements: '', pacing: '' }
   }
 
-  // ── Save session ──────────────────────────────────────────
   const practiceSession = await prisma.practiceSession.create({
     data: {
       transcript,
@@ -129,7 +132,7 @@ Be direct, specific, and encouraging. Return ONLY valid JSON.`
       aiFeedback: JSON.stringify(evaluation),
       ideaId: params.id,
       userId: session.user.id,
-    }
+    },
   })
 
   return NextResponse.json({

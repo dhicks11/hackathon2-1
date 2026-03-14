@@ -4,8 +4,6 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
-
 const SYSTEM_PROMPT = `You are an expert pitch consultant for Lenovo's PitchPad platform.
 Given an idea and reviewer feedback, generate an 8-slide investor pitch deck.
 
@@ -33,6 +31,13 @@ export async function POST(
 ) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY
+  if (!anthropicApiKey) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+  }
+
+  const client = new Anthropic({ apiKey: anthropicApiKey })
 
   const idea = await prisma.idea.findUnique({
     where: { id: params.id },
