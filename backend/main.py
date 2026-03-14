@@ -16,6 +16,9 @@ from supabase import create_client
 # Loads environment variables from the .env file (API keys)
 from dotenv import load_dotenv
 
+# Ethan's route modules
+from routes import assets, alerts, metrics, ingest
+
 import os
 import tempfile  # Used to temporarily save audio files for Whisper
 
@@ -36,6 +39,12 @@ app.add_middleware(
 # Initialize OpenAI and Supabase clients using keys from .env
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+
+# Include Ethan's routers
+app.include_router(assets.router,  prefix="/api")
+app.include_router(alerts.router,  prefix="/api")
+app.include_router(metrics.router, prefix="/api")
+app.include_router(ingest.router,  prefix="/api")
 
 
 # --- Request Models ---
@@ -71,6 +80,10 @@ class WhisperRequest(BaseModel):
 @app.get("/")
 def root():
     return {"status": "AI backend is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 # Takes an idea, sends it to GPT-4o for structured feedback, saves to feedback table
