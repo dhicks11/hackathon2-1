@@ -1,12 +1,11 @@
-import traceback
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from database import supabase
 from services.scoring import (
     score_idea, generate_pitch_summary,
     transcribe_audio, score_pitch_delivery
 )
-import tempfile, os
+import tempfile, os, traceback
 
 router = APIRouter()
 
@@ -26,6 +25,44 @@ class ChatRequest(BaseModel):
     question: str
     context:  str = ""
 
+class LoginInput(BaseModel):
+    email: str
+    password: str
+
+@router.post("/auth/login")
+def login(credentials: LoginInput):
+    try:
+        res = supabase.auth.sign_in_with_password({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+        return {
+            "access_token": res.session.access_token,
+            "user_id": res.user.id,
+            "email": res.user.email,
+            "role": res.user.user_metadata.get("role", "creator")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+@router.post("/auth/signup")
+def signup(credentials: LoginInput):
+    try:
+        res = supabase.auth.sign_up({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+        return {
+            "user_id": res.user.id,
+            "email": res.user.email,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/auth/profile/{user_id}")
+def get_profile(user_id: str):
+    res = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
+    return res.data
 @router.post("/ideas")
 def submit_idea(idea: IdeaInput):
     try:
