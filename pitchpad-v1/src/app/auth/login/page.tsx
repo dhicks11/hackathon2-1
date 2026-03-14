@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
-import { api } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,8 +16,17 @@ export default function LoginPage() {
     e.preventDefault()
     setError(''); setLoading(true)
     try {
-      await api.auth.login(email, password)
-      router.push('/dashboard')
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError('Invalid email or password')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setError(err.message ?? 'Invalid email or password')
     } finally { setLoading(false) }
@@ -59,34 +67,6 @@ export default function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in →'}
             </button>
           </form>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#E6E6E6' }} />
-            <span style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: '#E6E6E6' }} />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => signIn('microsoft-entra-id', { callbackUrl: '/dashboard' })}
-            className="lv-btn"
-            style={{
-              width: '100%',
-              justifyContent: 'center',
-              background: '#fff',
-              border: '1px solid #E6E6E6',
-              color: '#333',
-              gap: 10,
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
-              <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-              <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-              <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-              <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-            </svg>
-            Sign in with Microsoft
-          </button>
 
           <div style={{ borderTop: '1px solid #E6E6E6', margin: '24px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#999' }}>

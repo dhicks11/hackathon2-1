@@ -1,98 +1,102 @@
 // GET /api/metrics — dashboard summary numbers
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getSupabaseServerClient } from '@/lib/supabase'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const sb = getSupabaseServerClient()
   const isReviewer = session.user.role === 'REVIEWER'
 
+  // Get idea counts
+  const whereClause = isReviewer ? {} : { authorId: session.user.id }
+
   const [
-    { count: totalIdeas },
-    { count: submittedIdeas },
-    { count: inReviewIdeas },
-    { count: completeIdeas },
-    { count: totalFeedback },
-    { data: scoreData },
-    { count: practiceSessions },
-    { count: unreadAlerts },
+    totalIdeas,
+    submittedIdeas,
+    inReviewIdeas,
+    completeIdeas,
+    draftIdeas,
+    totalFeedback,
+    feedbackData,
+    practiceSessions,
   ] = await Promise.all([
-    // Idea counts
+    prisma.idea.count({ where: whereClause }),
+    prisma.idea.count({ where: { ...whereClause, status: 'SUBMITTED' } }),
+    prisma.idea.count({ where: { ...whereClause, status: 'IN_REVIEW' } }),
+    prisma.idea.count({ where: { ...whereClause, status: 'COMPLETE' } }),
+    prisma.idea.count({ where: { ...whereClause, status: 'DRAFT' } }),
     isReviewer
-      ? sb.from('ideas').select('*', { count: 'exact', head: true })
-      : sb.from('ideas').select('*', { count: 'exact', head: true }).eq('author_id', session.user.id),
-
-    isReviewer
-      ? sb.from('ideas').select('*', { count: 'exact', head: true }).eq('status', 'SUBMITTED')
-      : sb.from('ideas').select('*', { count: 'exact', head: true }).eq('author_id', session.user.id).eq('status', 'SUBMITTED'),
-
-    isReviewer
-      ? sb.from('ideas').select('*', { count: 'exact', head: true }).eq('status', 'IN_REVIEW')
-      : sb.from('ideas').select('*', { count: 'exact', head: true }).eq('author_id', session.user.id).eq('status', 'IN_REVIEW'),
-
-    isReviewer
-      ? sb.from('ideas').select('*', { count: 'exact', head: true }).eq('status', 'COMPLETE')
-      : sb.from('ideas').select('*', { count: 'exact', head: true }).eq('author_id', session.user.id).eq('status', 'COMPLETE'),
-
-    // Feedback count
-    isReviewer
-      ? sb.from('feedbacks').select('*', { count: 'exact', head: true }).eq('reviewer_id', session.user.id)
-      : sb.from('feedbacks').select('feedbacks!inner(*)', { count: 'exact', head: true }),
-
-    // Avg scores
-    isReviewer
-      ? sb.from('feedbacks').select('score_clarity,score_market,score_innovation,score_execution').eq('reviewer_id', session.user.id)
-      : sb.from('feedbacks').select('score_clarity,score_market,score_innovation,score_execution'),
-
-    // Practice sessions
-    sb.from('practice_sessions').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id),
-
-    // Unread alerts
-    sb.from('alerts').select('*', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('read', false),
+      ? prisma.feedback.count({ where: { reviewerId: session.user.id } })
+      : prisma.feedback.count(),
+    prisma.feedback.findMany({
+      where: isReviewer ? { reviewerId: session.user.id } : {},
+      select: {
+        scoreclarity: true,
+        scoreMarket: true,
+        scoreInnovation: true,
+        scoreExecution: true,
+        createdAt: true,
+      }
+    }),
+    prisma.practiceSession.count({ where: { userId: session.user.id } }),
   ])
 
-  // Compute average scores
-  const allScores = (scoreData ?? []).flatMap((f: any) =>
-    [f.score_clarity, f.score_market, f.score_innovation, f.score_execution].filter(Boolean)
+  // Compute averages
+  const allScores = feedbackData.flatMap(f =>
+    [f.scoreclarity, f.scoreMarket, f.scoreInnovation, f.scoreExecution].filter(Boolean) as number[]
   )
   const avgScore = allScores.length
-    ? Math.round((allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length) * 20) // 1-5 → 0-100
+    ? Math.round((allScores.reduce((a, b) => a + b, 0) / allScores.length) * 20)
     : null
 
   const avgByDimension = {
-    clarity:    avg(scoreData, 'score_clarity'),
-    market:     avg(scoreData, 'score_market'),
-    innovation: avg(scoreData, 'score_innovation'),
-    execution:  avg(scoreData, 'score_execution'),
+    clarity: avg(feedbackData, 'scoreclarity'),
+    market: avg(feedbackData, 'scoreMarket'),
+    innovation: avg(feedbackData, 'scoreInnovation'),
+    execution: avg(feedbackData, 'scoreExecution'),
   }
 
-  return NextResponse.json({
-    data: {
-      ideas: {
-        total:    totalIdeas    ?? 0,
-        submitted: submittedIdeas ?? 0,
-        inReview: inReviewIdeas  ?? 0,
-        complete: completeIdeas  ?? 0,
-      },
-      feedback: {
-        total:  totalFeedback ?? 0,
-        avgScore,
-        byDimension: avgByDimension,
-      },
-      practice: {
-        total: practiceSessions ?? 0,
-      },
-      alerts: {
-        unread: unreadAlerts ?? 0,
-      },
+  // Monthly trend
+  const monthlyData: Record<string, { scores: number[]; count: number }> = {}
+  feedbackData.forEach(f => {
+    const month = new Date(f.createdAt).toLocaleString('default', { month: 'short' })
+    if (!monthlyData[month]) monthlyData[month] = { scores: [], count: 0 }
+    const scores = [f.scoreclarity, f.scoreMarket, f.scoreInnovation, f.scoreExecution].filter(Boolean) as number[]
+    if (scores.length) {
+      monthlyData[month].scores.push(scores.reduce((a, b) => a + b, 0) / scores.length)
+      monthlyData[month].count++
     }
+  })
+
+  const feedbackTrend = Object.entries(monthlyData).slice(-6).map(([month, data]) => ({
+    month,
+    avg: data.scores.length ? data.scores.reduce((a, b) => a + b, 0) / data.scores.length : 0,
+    count: data.count,
+  }))
+
+  return NextResponse.json({
+    ideas: {
+      total: totalIdeas,
+      submitted: submittedIdeas,
+      inReview: inReviewIdeas,
+      complete: completeIdeas,
+      draft: draftIdeas,
+    },
+    feedback: {
+      total: totalFeedback,
+      avgScore,
+      byDimension: avgByDimension,
+      trend: feedbackTrend,
+    },
+    practice: {
+      total: practiceSessions,
+    },
   })
 }
 
-function avg(rows: any[] | null, field: string): number | null {
+function avg(rows: any[], field: string): number | null {
   if (!rows?.length) return null
   const vals = rows.map(r => r[field]).filter(Boolean)
   if (!vals.length) return null

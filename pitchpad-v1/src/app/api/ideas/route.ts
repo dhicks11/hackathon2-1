@@ -1,7 +1,7 @@
 // src/app/api/ideas/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { getSupabaseServerClient } from '@/lib/supabase'
+import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 const createSchema = z.object({
@@ -11,7 +11,7 @@ const createSchema = z.object({
   market:     z.string().min(10),
   ask:        z.string().optional(),
   tags:       z.array(z.string()).optional().default([]),
-  visibility: z.enum(['PRIVATE', 'TEAM', 'PUBLIC']),
+  visibility: z.enum(['PRIVATE', 'TEAM', 'PUBLIC']).default('PRIVATE'),
   status:     z.enum(['DRAFT', 'SUBMITTED']).default('DRAFT'),
 })
 
@@ -26,17 +26,21 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
 
-  const sb = getSupabaseServerClient()
-  const { data, error } = await (sb.from('ideas') as any).insert({
-    id: crypto.randomUUID(),
-    author_id: session.user.id,
-    ...parsed.data,
-    ask: parsed.data.ask ?? null,
-    pitch_score: null,
-  }).select().single()
+  const idea = await prisma.idea.create({
+    data: {
+      title: parsed.data.title,
+      problem: parsed.data.problem,
+      solution: parsed.data.solution,
+      market: parsed.data.market,
+      ask: parsed.data.ask,
+      tags: parsed.data.tags,
+      visibility: parsed.data.visibility,
+      status: parsed.data.status,
+      authorId: session.user.id,
+    },
+  })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data }, { status: 201 })
+  return NextResponse.json(idea, { status: 201 })
 }
 
 export async function GET(req: NextRequest) {
@@ -45,18 +49,27 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const mine = searchParams.get('mine') === 'true'
-  const sb = getSupabaseServerClient()
 
-  let query = sb.from('ideas').select('id, title, status, visibility, tags, created_at, updated_at, author_id')
-
+  let ideas
   if (mine || session.user.role === 'CREATOR') {
-    query = query.eq('author_id', session.user.id)
-  }
-  if (session.user.role === 'REVIEWER') {
-    query = query.in('status', ['SUBMITTED', 'IN_REVIEW']).in('visibility', ['TEAM', 'PUBLIC'])
+    ideas = await prisma.idea.findMany({
+      where: { authorId: session.user.id },
+      orderBy: { updatedAt: 'desc' },
+    })
+  } else if (session.user.role === 'REVIEWER') {
+    ideas = await prisma.idea.findMany({
+      where: {
+        status: { in: ['SUBMITTED', 'IN_REVIEW'] },
+        visibility: { in: ['TEAM', 'PUBLIC'] },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+  } else {
+    ideas = await prisma.idea.findMany({
+      where: { authorId: session.user.id },
+      orderBy: { updatedAt: 'desc' },
+    })
   }
 
-  const { data, error } = await query.order('updated_at', { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  return NextResponse.json(ideas)
 }
