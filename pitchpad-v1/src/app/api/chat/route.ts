@@ -5,7 +5,24 @@ import { auth } from '@/lib/auth'
 import { getSupabaseServerClient } from '@/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
+
+interface Idea {
+  id: string
+  title: string
+  status: string
+  problem: string | null
+  solution: string | null
+  market: string | null
+}
+
+interface Feedback {
+  content: string
+  score_clarity: number | null
+  score_market: number | null
+  score_innovation: number | null
+  score_execution: number | null
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -16,22 +33,25 @@ export async function POST(req: NextRequest) {
 
   const sb = getSupabaseServerClient()
 
-  // Pull context: user's ideas + feedback scores
-  const [{ data: ideas }, { data: feedbacks }] = await Promise.all([
-    sb.from('ideas')
-      .select('id, title, status, problem, solution, market')
-      .eq('author_id', session.user.id)
-      .order('updated_at', { ascending: false })
-      .limit(3),
+  // Pull context: user's ideas
+  const { data: ideasData } = await sb.from('ideas')
+    .select('id, title, status, problem, solution, market')
+    .eq('author_id', session.user.id)
+    .order('updated_at', { ascending: false })
+    .limit(3)
 
-    ideaId
-      ? sb.from('feedbacks')
-          .select('content, score_clarity, score_market, score_innovation, score_execution')
-          .eq('idea_id', ideaId)
-          .order('created_at', { ascending: false })
-          .limit(5)
-      : Promise.resolve({ data: [] }),
-  ])
+  const ideas = ideasData as Idea[] | null
+
+  // Fetch feedbacks if ideaId provided
+  let feedbacks: Feedback[] | null = null
+  if (ideaId) {
+    const { data: feedbacksData } = await sb.from('feedbacks')
+      .select('content, score_clarity, score_market, score_innovation, score_execution')
+      .eq('idea_id', ideaId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    feedbacks = feedbacksData as Feedback[] | null
+  }
 
   const contextLines: string[] = []
 

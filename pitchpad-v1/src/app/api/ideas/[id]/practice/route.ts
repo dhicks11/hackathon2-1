@@ -6,8 +6,8 @@ import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import { countFillerWords } from '@/lib/utils'
 
-const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const openai    = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || 'missing' })
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || 'missing' })
 
 const IDEAL_WPM_MIN = 130
 const IDEAL_WPM_MAX = 160
@@ -34,7 +34,8 @@ export async function POST(
   const sb = getSupabaseServerClient()
 
   // Fetch idea so we can match keywords
-  const { data: idea } = await sb.from('ideas').select('title, solution, market').eq('id', params.id).single()
+  const { data: ideaData } = await sb.from('ideas').select('title, solution, market').eq('id', params.id).single()
+  const idea = ideaData as { title: string; solution: string; market: string } | null
 
   // ── Whisper transcription ─────────────────────────────────
   const transcription = await openai.audio.transcriptions.create({
@@ -51,7 +52,7 @@ export async function POST(
   const fillerWords = countFillerWords(transcript)
   const pacingScore = Math.round(calcPacingScore(wpm))
 
-  const sentences      = transcript.split(/[.!?]+/).filter(s => s.trim().length > 10)
+  const sentences      = transcript.split(/[.!?]+/).filter((s: string) => s.trim().length > 10)
   const avgSentenceLen = sentences.length ? wordCount / sentences.length : 0
   const clarityScore   = Math.round(Math.max(20, Math.min(100,
     100 - Math.abs(avgSentenceLen - 18) * 2 - fillerWords * 3
@@ -100,7 +101,7 @@ Be direct, specific, and encouraging. Max 200 words.`
   const aiFeedback = coachMsg.content[0].type === 'text' ? coachMsg.content[0].text : ''
 
   // ── Save session ──────────────────────────────────────────
-  const { data: session_record } = await sb.from('practice_sessions').insert({
+  const { data: session_record } = await (sb.from('practice_sessions') as any).insert({
     id: crypto.randomUUID(),
     transcript,
     duration_sec: durationSec,

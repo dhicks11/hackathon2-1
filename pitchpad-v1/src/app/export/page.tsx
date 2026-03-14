@@ -1,6 +1,8 @@
 // src/app/export/page.tsx  — Export / Pitch Summary screen
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -24,14 +26,14 @@ export default function ExportPage() {
 
   useEffect(() => {
     sb.from('ideas').select('id,title,status').order('updated_at', { ascending: false })
-      .then(({ data }) => { setIdeas(data ?? []); if (data?.[0]) setSelected(data[0].id) })
+      .then(({ data }) => { const d = data as any[]; setIdeas(d ?? []); if (d?.[0]) setSelected(d[0].id) })
   }, [])
 
   useEffect(() => {
     if (!selected) return
     setDeck(null)
     sb.from('pitch_decks').select('slides').eq('idea_id', selected).order('version', { ascending: false }).limit(1)
-      .then(({ data }) => { if (data?.[0]?.slides) setDeck(data[0].slides as PitchSlide[]) })
+      .then(({ data }) => { const d = data as any[]; if (d?.[0]?.slides) setDeck(d[0].slides as PitchSlide[]) })
   }, [selected])
 
   async function generateDeck() {

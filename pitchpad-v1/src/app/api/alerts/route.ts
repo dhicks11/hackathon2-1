@@ -19,8 +19,10 @@ export async function PATCH(req: NextRequest) {
   const { id, all } = await req.json()
   const sb = getSupabaseServerClient()
   if (all) {
+    // @ts-ignore - alerts table not in generated types
     await sb.from('alerts').update({ read: true }).eq('user_id', session.user.id)
   } else if (id) {
+    // @ts-ignore - alerts table not in generated types
     await sb.from('alerts').update({ read: true }).eq('id', id).eq('user_id', session.user.id)
   }
   return NextResponse.json({ success: true })
