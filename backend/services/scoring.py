@@ -1,16 +1,26 @@
 from groq import Groq
 from config import GROQ_API_KEY
-import whisper
-import numpy as np
 import json
 import os
 
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # load whisper once on startup — takes about 30 seconds the first time
-whisper_model = whisper.load_model("base")
+_whisper_model = None
+
+def get_whisper_model():
+    global _whisper_model
+    if _whisper_model is None:
+        try:
+            import whisper  # imported lazily to avoid heavy deps at startup
+        except Exception:
+            return None
+        _whisper_model = whisper.load_model("base")
+    return _whisper_model
 
 def score_idea(title: str, description: str) -> dict:
+    if not client:
+        return {"score": 5, "verdict": "needs_work", "feedback": "GROQ_API_KEY not configured"}
     prompt = f"""You are an expert startup pitch evaluator.
 
 Evaluate this idea and return a JSON response with exactly these fields:
@@ -43,6 +53,8 @@ Respond with JSON only, no other text."""
         }
 
 def generate_pitch_summary(title: str, description: str, feedback: list) -> str:
+    if not client:
+        return "GROQ_API_KEY not configured"
     feedback_text = "\n".join([f"- {f}" for f in feedback]) if feedback else "No feedback yet"
 
     prompt = f"""Generate a compelling 3-paragraph pitch summary for this idea.
@@ -65,10 +77,15 @@ Write it as if presenting to investors. Be concise and compelling."""
     return response.choices[0].message.content
 
 def transcribe_audio(audio_path: str) -> str:
-    result = whisper_model.transcribe(audio_path)
+    model = get_whisper_model()
+    if not model:
+        return "Whisper model not available on this deployment"
+    result = model.transcribe(audio_path)
     return result["text"]
 
 def score_pitch_delivery(transcript: str, idea_title: str) -> dict:
+    if not client:
+        return {"delivery_score": 5, "overall_feedback": "GROQ_API_KEY not configured"}
     prompt = f"""You are a pitch coach evaluating a spoken pitch delivery.
 
 The pitcher is presenting: {idea_title}
@@ -102,6 +119,8 @@ JSON only, no other text."""
         }
 
 def ask_ai(question: str, context: str = "") -> str:
+    if not client:
+        return "GROQ_API_KEY not configured"
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": f"Context: {context}\n\nQuestion: {question}"}],

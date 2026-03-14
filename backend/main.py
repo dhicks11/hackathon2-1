@@ -32,19 +32,34 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Initialize OpenAI and Supabase clients using keys from .env
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
+openai_api_key = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI(api_key=openai_api_key) if openai_api_key else None
+
+supabase_url = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
+supabase_key = (
+    os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    or os.getenv("SUPABASE_KEY")
+    or os.getenv("SUPABASE_ANON_KEY")
+    or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+)
+supabase = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
+
 
 # Include Ethan's routers
 app.include_router(assets.router,  prefix="/api")
 app.include_router(alerts.router,  prefix="/api")
 app.include_router(metrics.router, prefix="/api")
 app.include_router(ingest.router,  prefix="/api")
+
+def require_supabase():
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
 
 
 # --- Request Models ---
@@ -89,6 +104,9 @@ def health():
 # Takes an idea, sends it to GPT-4o for structured feedback, saves to feedback table
 @app.post("/ai/feedback")
 async def get_feedback(req: IdeaRequest):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+    require_supabase()
     prompt = f"""
 You are an expert startup advisor. A user has submitted the following idea:
 
@@ -125,6 +143,9 @@ Return as plain text with clear sections.
 # Scores the idea against a rubric — returns structured JSON scores and updates the ideas table
 @app.post("/ai/score")
 async def score_idea(req: IdeaRequest):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+    require_supabase()
     prompt = f"""
 Score this startup idea using a rubric. Return ONLY a JSON object with these keys:
 clarity (0-10), feasibility (0-10), impact (0-10), overall (0-10), summary (one sentence).
@@ -152,6 +173,9 @@ Description: {req.idea_description}
 # Generates a pitch deck summary and saves it to pitch_summaries table
 @app.post("/ai/pitch")
 async def generate_pitch(req: PitchRequest):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+    require_supabase()
     prompt = f"""
 Generate a concise pitch deck summary for the following idea.
 
@@ -186,6 +210,9 @@ Keep it punchy and presentation-ready.
 # Generates structured slide content as JSON — frontend renders this as a visual deck
 @app.post("/ai/slides")
 async def generate_slides(req: SlidesRequest):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+    require_supabase()
     prompt = f"""
 You are a pitch deck designer. Based on the idea and pitch summary below, generate a slide deck as a JSON array.
 
@@ -235,6 +262,9 @@ async def transcribe_and_feedback(
     user_id: str,
     file: UploadFile = File(...)
 ):
+    if not openai_client:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not configured")
+    require_supabase()
     # Save the uploaded audio to a temporary file on disk
     # Whisper requires a real file, not just bytes in memory
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
