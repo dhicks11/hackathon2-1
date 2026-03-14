@@ -12,28 +12,33 @@ const schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+  try {
+    const body = await req.json()
+    const parsed = schema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const name = parsed.data.name.trim()
+    const email = parsed.data.email.toLowerCase().trim()
+    const password = parsed.data.password
+    const role = parsed.data.role ?? 'CREATOR'
+
+    const exists = await prisma.user.findUnique({ where: { email } })
+    if (exists) {
+      return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
+    }
+
+    const hashed = await bcrypt.hash(password, 12)
+    const user = await prisma.user.create({
+      data: { name, email, password: hashed, role },
+    })
+
+    return NextResponse.json({
+      data: { id: user.id, email: user.email, role: user.role },
+    }, { status: 201 })
+  } catch (error: any) {
+    console.error('Registration error:', error)
+    return NextResponse.json({ error: error.message || 'Registration failed' }, { status: 500 })
   }
-
-  const name = parsed.data.name.trim()
-  const email = parsed.data.email.toLowerCase().trim()
-  const password = parsed.data.password
-  const role = parsed.data.role ?? 'CREATOR'
-
-  const exists = await prisma.user.findUnique({ where: { email } })
-  if (exists) {
-    return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
-  }
-
-  const hashed = await bcrypt.hash(password, 12)
-  const user = await prisma.user.create({
-    data: { name, email, password: hashed, role },
-  })
-
-  return NextResponse.json({
-    data: { id: user.id, email: user.email, role: user.role },
-  }, { status: 201 })
 }
