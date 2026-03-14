@@ -3,7 +3,9 @@
 // Set NEXT_PUBLIC_API_URL in .env.local to your Railway URL
 // Falls back to localhost:8000 for local development
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+const BASE =
+  process.env.NEXT_PUBLIC_API_URL ??
+  'https://hackathon2-soxv-production.up.railway.app'
 
 // ── Auth token (stored in memory + localStorage) ─────────────
 let _token: string | null = null
