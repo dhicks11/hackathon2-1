@@ -38,10 +38,10 @@ export default function Sidebar({ user }: SidebarProps) {
   return (
     <aside className="w-56 flex flex-col border-r border-tp-800 bg-tp-900 shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-tp-800">
+      <Link href="/" className="flex items-center gap-2.5 px-5 py-5 border-b border-tp-800">
         <div className="w-3.5 h-3.5 bg-lenovo-red shrink-0" />
         <span className="font-mono text-xs tracking-widest text-tp-white uppercase">PitchPad</span>
-      </div>
+      </Link>
 
       {/* Role badge */}
       <div className="px-5 py-3 border-b border-tp-800">
