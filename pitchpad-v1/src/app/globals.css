@@ -129,8 +129,33 @@
 }
 
 @media (max-width: 640px) {
+  .lp-nav-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  .lp-subnav {
+    display: none;
+  }
   .lp-hero h1 {
-    font-size: 32px !important;
+    font-size: 30px !important;
+    line-height: 1.15 !important;
+  }
+  .lp-hero p {
+    font-size: 13px !important;
+  }
+  .lp-hero-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lp-hero-cta .lv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .lp-step {
+    gap: 8px !important;
+  }
+  .lp-step > div:last-child {
+    padding: 4px 8px 20px !important;
   }
   .lp-promo-grid,
   .lp-feature-grid,
