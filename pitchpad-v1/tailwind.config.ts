@@ -1,0 +1,55 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {
+      colors: {
+        'lv-red':       '#E2001A',
+        'lv-red-hover': '#B5001A',
+        'lv-red-light': '#FFF0F2',
+        'lv-white':     '#FFFFFF',
+        'lv-50':        '#F8F8F8',
+        'lv-100':       '#F2F2F2',
+        'lv-200':       '#E6E6E6',
+        'lv-300':       '#CCCCCC',
+        'lv-400':       '#999999',
+        'lv-500':       '#666666',
+        'lv-700':       '#333333',
+        'lv-900':       '#111111',
+        'lv-green':     '#00875A',
+        'lv-amber':     '#FF8800',
+        'lv-blue':      '#0066CC',
+      },
+      fontFamily: {
+        sans: ['IBM Plex Sans', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.625rem', { lineHeight: '1rem' }],
+        xs:    ['0.75rem',  { lineHeight: '1.125rem' }],
+        sm:    ['0.8125rem',{ lineHeight: '1.25rem' }],
+        base:  ['0.875rem', { lineHeight: '1.5rem' }],
+        lg:    ['1rem',     { lineHeight: '1.625rem' }],
+        xl:    ['1.125rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.25rem',  { lineHeight: '1.875rem' }],
+        '3xl': ['1.5rem',   { lineHeight: '2rem' }],
+        '4xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '5xl': ['2.25rem',  { lineHeight: '2.5rem' }],
+      },
+      borderRadius: {
+        DEFAULT: '2px',
+        sm: '2px',
+        md: '4px',
+        lg: '6px',
+        xl: '8px',
+      },
+      boxShadow: {
+        'card':  '0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+        'hover': '0 4px 16px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06)',
+        'modal': '0 20px 60px rgba(0,0,0,0.18)',
+        'red':   '0 0 0 3px rgba(226,0,26,0.12)',
+      },
+    },
+  },
+  plugins: [],
+}
