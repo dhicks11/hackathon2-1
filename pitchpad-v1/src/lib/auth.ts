@@ -2,6 +2,7 @@
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
+import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -35,6 +36,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   providers: [
+    MicrosoftEntraID({
+      clientId: process.env.AZURE_AD_CLIENT_ID!,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
+      tenantId: process.env.AZURE_AD_TENANT_ID,
+      authorization: {
+        params: { scope: 'openid profile email User.Read' },
+      },
+    }),
     Credentials({
       name: 'credentials',
       credentials: {
