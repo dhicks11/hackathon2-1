@@ -51,13 +51,15 @@ export default function AlertsPage() {
   }
 
   async function markRead(id: string) {
-    await sb.from('alerts').update({ read: true }).eq('id', id)
+    // @ts-ignore
+    await sb.from('alerts').update({ read: true } as any).eq('id', id)
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a))
   }
 
   async function markAllRead() {
     const unread = alerts.filter(a => !a.read).map(a => a.id)
     if (!unread.length) return
+    // @ts-ignore
     await sb.from('alerts').update({ read: true }).in('id', unread)
     setAlerts(prev => prev.map(a => ({ ...a, read: true })))
   }
