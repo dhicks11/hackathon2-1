@@ -58,6 +58,8 @@ def signup(credentials: LoginInput):
             "email": credentials.email,
             "password": credentials.password
         })
+        if not res.user:
+            raise HTTPException(status_code=400, detail="Signup failed — check email confirmation settings in Supabase")
         return {
             "user_id": res.user.id,
             "email": res.user.email,
