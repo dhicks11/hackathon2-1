@@ -19,7 +19,21 @@ async function main() {
     },
   })
 
-  console.log('Created test user:', creator.email)
+  // Create test reviewer account
+  const reviewerPassword = await bcrypt.hash('pitchpad123', 12)
+
+  const reviewer = await prisma.user.upsert({
+    where: { email: 'reviewer@pitchpad.com' },
+    update: {},
+    create: {
+      email: 'reviewer@pitchpad.com',
+      name: 'Test Reviewer',
+      password: reviewerPassword,
+      role: 'REVIEWER',
+    },
+  })
+
+  console.log('Created test users:', creator.email, reviewer.email)
 }
 
 main()
