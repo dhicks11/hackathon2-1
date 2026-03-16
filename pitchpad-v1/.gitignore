@@ -1,0 +1,22 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+
+# Vercel
+.vercel
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Debug
+npm-debug.log*
+
+# IDE
+.idea
+.vscode
+*.swp
