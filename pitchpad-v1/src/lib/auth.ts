@@ -3,6 +3,7 @@ import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
 import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
+import Google from 'next-auth/providers/google'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -20,55 +21,104 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: '/auth/login',
     newUser: '/auth/register',
+    error: '/auth/error',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // For OAuth sign-ins, ensure user has a role
+      if (account?.provider !== 'credentials' && user.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+        })
+
+        // If user exists but was created via OAuth (no role), update with default role
+        if (existingUser && !existingUser.role) {
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { role: 'CREATOR' },
+          })
+        }
+      }
+      return true
+    },
+    async jwt({ token, user, account, trigger, session }) {
+      // Initial sign-in
       if (user) {
         token.id = user.id
-        token.role = (user as any).role
+        token.role = (user as any).role || 'CREATOR'
+        token.provider = account?.provider
       }
+
+      // Handle session updates (e.g., from update() call)
+      if (trigger === 'update' && session) {
+        token.name = session.name ?? token.name
+      }
+
+      // Fetch role from database if not set (for OAuth users)
+      if (token.id && !token.role) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        })
+        token.role = dbUser?.role || 'CREATOR'
+      }
+
       return token
     },
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string
-        session.user.role = token.role as string
+        session.user.role = (token.role as string) || 'CREATOR'
+        session.user.provider = token.provider as string | undefined
       }
       return session
     },
   },
+  events: {
+    // Set default role for new OAuth users
+    async createUser({ user }) {
+      if (user.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'CREATOR' },
+        })
+      }
+    },
+  },
   providers: [
+    // Microsoft SSO (Azure AD / Entra ID)
     MicrosoftEntraID({
       clientId: process.env.AZURE_AD_CLIENT_ID!,
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      // Use 'common' for multi-tenant, 'organizations' for work/school only
       issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID || 'common'}/v2.0`,
       authorization: {
         params: { scope: 'openid profile email User.Read' },
       },
+      allowDangerousEmailAccountLinking: true,
     }),
+    // Google SSO
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true,
+    }),
+    // Email/Password credentials
     Credentials({
       name: 'credentials',
       credentials: {
-        email:    { label: 'Email',    type: 'email' },
+        email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.log('AUTH: credentials received', { email: credentials?.email })
         const parsed = loginSchema.safeParse(credentials)
-        if (!parsed.success) {
-          console.log('AUTH: validation failed', parsed.error)
-          return null
-        }
+        if (!parsed.success) return null
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email.toLowerCase().trim() },
         })
-        console.log('AUTH: user found?', !!user, user?.email)
         if (!user || !user.password) return null
 
         const valid = await bcrypt.compare(parsed.data.password, user.password)
-        console.log('AUTH: password valid?', valid)
         if (!valid) return null
 
         return {
@@ -92,6 +142,15 @@ declare module 'next-auth' {
       email: string
       name?: string | null
       image?: string | null
+      provider?: string
     }
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string
+    role?: string
+    provider?: string
   }
 }
