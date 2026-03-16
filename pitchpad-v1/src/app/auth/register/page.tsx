@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [ssoLoading, setSsoLoading] = useState<string | null>(null)
+  const [focusedField, setFocusedField] = useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,7 +53,7 @@ export default function RegisterPage() {
     }
   }
 
-  async function handleSSOSignIn(provider: 'microsoft-entra-id' | 'google') {
+  async function handleSSOSignIn(provider: 'microsoft-entra-id') {
     setSsoLoading(provider)
     try {
       await signIn(provider, { callbackUrl: '/dashboard' })
@@ -62,179 +63,280 @@ export default function RegisterPage() {
     }
   }
 
+  const inputStyle = (field: string, hasValue: boolean) => ({
+    width: '100%',
+    padding: '16px 0 8px',
+    background: 'transparent',
+    border: 'none',
+    borderBottom: `2px solid ${focusedField === field ? '#E2001A' : hasValue ? '#333' : '#E6E6E6'}`,
+    outline: 'none',
+    fontSize: 15,
+    color: '#111',
+    transition: 'border-color 0.2s ease',
+  })
+
+  const labelStyle = (field: string, hasValue: boolean) => ({
+    position: 'absolute' as const,
+    left: 0,
+    top: focusedField === field || hasValue ? 0 : 16,
+    fontSize: focusedField === field || hasValue ? 11 : 14,
+    color: focusedField === field ? '#E2001A' : '#999',
+    fontWeight: focusedField === field || hasValue ? 500 : 400,
+    transition: 'all 0.2s ease',
+    pointerEvents: 'none' as const,
+    textTransform: focusedField === field || hasValue ? 'uppercase' as const : 'none' as const,
+    letterSpacing: focusedField === field || hasValue ? '0.05em' : 0,
+  })
+
   return (
-    <div style={{ minHeight: '100vh', background: '#F8F8F8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32, justifyContent: 'center' }}>
-          <div style={{ width: 20, height: 20, background: '#E2001A', borderRadius: 1 }} />
-          <span style={{ fontFamily: 'IBM Plex Sans', fontWeight: 600, fontSize: 16, color: '#111' }}>PitchPad</span>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #FAFAFA 0%, #F0F0F0 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 24,
+          }}>
+            <div style={{
+              width: 28,
+              height: 28,
+              background: '#E2001A',
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(226, 0, 26, 0.3)',
+            }} />
+            <span style={{
+              fontFamily: 'IBM Plex Sans',
+              fontWeight: 600,
+              fontSize: 20,
+              color: '#111',
+              letterSpacing: '-0.02em',
+            }}>
+              PitchPad
+            </span>
+          </div>
+          <h1 style={{
+            fontSize: 28,
+            fontWeight: 300,
+            color: '#111',
+            marginBottom: 8,
+            letterSpacing: '-0.02em',
+          }}>
+            Join the platform
+          </h1>
+          <p style={{ fontSize: 14, color: '#666' }}>
+            Start sharing your innovative ideas
+          </p>
         </div>
 
-        <div className="lv-card" style={{ padding: 36 }}>
-          <div style={{ width: 40, height: 3, background: '#E2001A', marginBottom: 20 }} />
-          <h1 style={{ fontSize: 22, fontWeight: 300, color: '#111', marginBottom: 6 }}>Create account</h1>
-          <p style={{ fontSize: 13, color: '#999', marginBottom: 24 }}>Join the innovation platform</p>
-
-          {/* SSO Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        {/* Main Card */}
+        <div style={{
+          background: '#fff',
+          borderRadius: 16,
+          padding: '40px 36px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+        }}>
+          {/* SSO Options */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
             <button
               onClick={() => handleSSOSignIn('microsoft-entra-id')}
               disabled={ssoLoading !== null}
               style={{
+                flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '12px 16px',
-                background: '#fff',
-                border: '1px solid #E6E6E6',
-                borderRadius: 4,
+                gap: 8,
+                padding: '14px 16px',
+                background: ssoLoading === 'microsoft-entra-id' ? '#F8F8F8' : '#fff',
+                border: '1.5px solid #E6E6E6',
+                borderRadius: 10,
                 cursor: ssoLoading ? 'not-allowed' : 'pointer',
                 fontSize: 13,
                 fontWeight: 500,
                 color: '#333',
-                transition: 'all 0.15s',
+                transition: 'all 0.2s ease',
               }}
-              className="sso-btn"
+              onMouseOver={e => { if (!ssoLoading) e.currentTarget.style.borderColor = '#CCC' }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = '#E6E6E6' }}
             >
               {ssoLoading === 'microsoft-entra-id' ? (
-                <span>Connecting...</span>
+                <span style={{ fontSize: 12 }}>...</span>
               ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
-                    <path d="M10 0H0v10h10V0z" fill="#F25022"/>
-                    <path d="M21 0H11v10h10V0z" fill="#7FBA00"/>
-                    <path d="M10 11H0v10h10V11z" fill="#00A4EF"/>
-                    <path d="M21 11H11v10h10V11z" fill="#FFB900"/>
-                  </svg>
-                  Sign up with Microsoft
-                </>
+                <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
+                  <path d="M10 0H0v10h10V0z" fill="#F25022"/>
+                  <path d="M21 0H11v10h10V0z" fill="#7FBA00"/>
+                  <path d="M10 11H0v10h10V11z" fill="#00A4EF"/>
+                  <path d="M21 11H11v10h10V11z" fill="#FFB900"/>
+                </svg>
               )}
+              <span>Microsoft</span>
             </button>
 
-            <button
-              onClick={() => handleSSOSignIn('google')}
-              disabled={ssoLoading !== null}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                width: '100%',
-                padding: '12px 16px',
-                background: '#fff',
-                border: '1px solid #E6E6E6',
-                borderRadius: 4,
-                cursor: ssoLoading ? 'not-allowed' : 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#333',
-                transition: 'all 0.15s',
-              }}
-              className="sso-btn"
-            >
-              {ssoLoading === 'google' ? (
-                <span>Connecting...</span>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  Sign up with Google
-                </>
-              )}
-            </button>
           </div>
 
           {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <div style={{ flex: 1, height: 1, background: '#E6E6E6' }} />
-            <span style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: '#E6E6E6' }} />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            marginBottom: 28,
+          }}>
+            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #E6E6E6)' }} />
+            <span style={{
+              fontSize: 11,
+              color: '#BBB',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              fontWeight: 500,
+            }}>
+              or continue with email
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #E6E6E6, transparent)' }} />
           </div>
 
-          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label className="lv-label">Full Name</label>
+          {/* Form */}
+          <form onSubmit={onSubmit}>
+            {/* Name Field */}
+            <div style={{ position: 'relative', marginBottom: 24 }}>
+              <label style={labelStyle('name', !!name)}>Full Name</label>
               <input
                 type="text"
-                className="lv-input"
-                placeholder="Your name"
                 value={name}
                 onChange={e => setName(e.target.value)}
+                onFocus={() => setFocusedField('name')}
+                onBlur={() => setFocusedField(null)}
+                style={inputStyle('name', !!name)}
                 autoComplete="name"
               />
             </div>
-            <div>
-              <label className="lv-label">Email address</label>
+
+            {/* Email Field */}
+            <div style={{ position: 'relative', marginBottom: 24 }}>
+              <label style={labelStyle('email', !!email)}>Email Address</label>
               <input
                 type="email"
-                className="lv-input"
-                placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                style={inputStyle('email', !!email)}
                 required
                 autoComplete="email"
               />
             </div>
-            <div>
-              <label className="lv-label">Password</label>
+
+            {/* Password Field */}
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <label style={labelStyle('password', !!password)}>Password</label>
               <input
                 type="password"
-                className="lv-input"
-                placeholder="Min 8 characters"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                style={inputStyle('password', !!password)}
                 required
                 minLength={8}
                 autoComplete="new-password"
               />
             </div>
+            <p style={{ fontSize: 11, color: '#999', marginBottom: 24 }}>
+              Minimum 8 characters
+            </p>
 
+            {/* Error */}
             {error && (
               <div style={{
-                padding: '10px 12px',
-                background: '#FFF0F2',
-                borderRadius: 4,
-                fontSize: 12,
-                color: '#E2001A',
+                padding: '12px 16px',
+                background: 'linear-gradient(135deg, #FFF5F5 0%, #FFF0F2 100%)',
+                borderRadius: 8,
+                fontSize: 13,
+                color: '#D32F2F',
+                marginBottom: 20,
+                borderLeft: '3px solid #E2001A',
               }}>
                 {error}
               </div>
             )}
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="lv-btn lv-btn-primary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
+              style={{
+                width: '100%',
+                padding: '16px 24px',
+                background: loading ? '#F5A5A5' : '#E2001A',
+                border: 'none',
+                borderRadius: 10,
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: loading ? 'none' : '0 4px 16px rgba(226, 0, 26, 0.3)',
+              }}
+              onMouseOver={e => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px)' }}
+              onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)' }}
             >
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
 
-          <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 16, lineHeight: 1.5 }}>
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
+          {/* Terms */}
+          <p style={{
+            fontSize: 11,
+            color: '#999',
+            textAlign: 'center',
+            marginTop: 20,
+            lineHeight: 1.6,
+          }}>
+            By signing up, you agree to our{' '}
+            <a href="#" style={{ color: '#666' }}>Terms</a> and{' '}
+            <a href="#" style={{ color: '#666' }}>Privacy Policy</a>
           </p>
-
-          <div style={{ borderTop: '1px solid #E6E6E6', margin: '20px 0' }} />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#999' }}>
-            <span>Have an account?</span>
-            <Link href="/auth/login" style={{ color: '#E2001A', textDecoration: 'none' }}>Sign in →</Link>
-          </div>
         </div>
 
-        <style jsx>{`
-          .sso-btn:hover:not(:disabled) {
-            background: #F8F8F8 !important;
-            border-color: #CCC !important;
-          }
-        `}</style>
+        {/* Sign In Link */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: 24,
+          padding: '16px',
+          background: 'rgba(255,255,255,0.6)',
+          borderRadius: 12,
+        }}>
+          <span style={{ fontSize: 14, color: '#666' }}>Already have an account? </span>
+          <Link
+            href="/auth/login"
+            style={{
+              color: '#E2001A',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Footer */}
+        <p style={{
+          textAlign: 'center',
+          fontSize: 11,
+          color: '#BBB',
+          marginTop: 24,
+        }}>
+          Lenovo Innovation Labs
+        </p>
       </div>
     </div>
   )
