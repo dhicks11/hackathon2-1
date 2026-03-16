@@ -5,35 +5,35 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Create test creator account
-  const creatorPassword = await bcrypt.hash('pitchpad123', 12)
+  // Hash password once for both users
+  const hashedPassword = await bcrypt.hash('pitchpad123', 10)
 
+  // Create/update test creator account
   const creator = await prisma.user.upsert({
     where: { email: 'creator@pitchpad.com' },
-    update: {},
+    update: { password: hashedPassword }, // Always update password
     create: {
       email: 'creator@pitchpad.com',
       name: 'Test Creator',
-      password: creatorPassword,
+      password: hashedPassword,
       role: 'CREATOR',
     },
   })
 
-  // Create test reviewer account
-  const reviewerPassword = await bcrypt.hash('pitchpad123', 12)
-
+  // Create/update test reviewer account
   const reviewer = await prisma.user.upsert({
     where: { email: 'reviewer@pitchpad.com' },
-    update: {},
+    update: { password: hashedPassword }, // Always update password
     create: {
       email: 'reviewer@pitchpad.com',
       name: 'Test Reviewer',
-      password: reviewerPassword,
+      password: hashedPassword,
       role: 'REVIEWER',
     },
   })
 
-  console.log('Created test users:', creator.email, reviewer.email)
+  console.log('Created/updated test users:', creator.email, reviewer.email)
+  console.log('Password for both: pitchpad123')
 }
 
 main()
