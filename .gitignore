@@ -1,5 +1,32 @@
+# Dependencies
 node_modules/
+
+# Build output
 .next/
+out/
+dist/
+
+# Environment files
 .env
+.env.local
+.env*.local
 *.backup
-.env.backup
+
+# IDE & Editor
+.claude/
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+nul
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Test files
+test.java
