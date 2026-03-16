@@ -71,13 +71,18 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 anim-fade-up anim-stagger-2">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#999' }}>Recent Ideas</h2>
+            <h2 style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#999' }}>
+              {session?.user?.role === 'REVIEWER' ? 'Ideas to Review' : 'Recent Ideas'}
+            </h2>
             <Link href="/ideas" style={{ fontSize: 12, color: '#E2001A', textDecoration: 'none' }}>View all →</Link>
           </div>
           <div className="lv-card overflow-hidden">
             {ideas.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#999', fontSize: 13 }}>
-                No ideas yet. <Link href="/ideas/new" style={{ color: '#E2001A' }}>Create your first idea →</Link>
+                {session?.user?.role === 'REVIEWER'
+                  ? 'No ideas submitted for review yet.'
+                  : <>No ideas yet. <Link href="/ideas/new" style={{ color: '#E2001A' }}>Create your first idea →</Link></>
+                }
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -116,12 +121,15 @@ export default function DashboardPage() {
         {/* Quick actions */}
         <div className="space-y-3 anim-fade-up anim-stagger-3">
           <h2 style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#999', marginBottom: 12 }}>Quick Actions</h2>
-          {[
+          {(session?.user?.role === 'REVIEWER' ? [
+            { href: '/ideas',       label: 'Review Ideas',  sub: 'View submissions',         bg: '#FFF0F2', color: '#E2001A', icon: '◎' },
+            { href: '/ai-assistant',label: 'AI Assistant',  sub: 'Analysis tools',           bg: '#E6F9F1', color: '#00875A', icon: '⚡' },
+          ] : [
             { href: '/ideas/new',   label: 'New Idea',      sub: 'Submit your pitch',        bg: '#FFF0F2', color: '#E2001A', icon: '+' },
             { href: '/practice',    label: 'Practice Pitch',sub: 'AI voice coaching',        bg: '#EBF3FF', color: '#0066CC', icon: '◎' },
             { href: '/ai-assistant',label: 'AI Assistant',  sub: 'Get feedback',             bg: '#E6F9F1', color: '#00875A', icon: '⚡' },
             { href: '/export',      label: 'Export Deck',   sub: 'Download slides',          bg: '#F8F8F8', color: '#666',    icon: '↓' },
-          ].map(a => (
+          ]).map(a => (
             <Link key={a.href} href={a.href} className="lv-card-hover" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, textDecoration: 'none' }}>
               <div style={{ width: 36, height: 36, background: a.bg, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: a.color, flexShrink: 0 }}>
                 {a.icon}
