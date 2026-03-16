@@ -1,5 +1,6 @@
 // src/app/auth/error/page.tsx
 'use client'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -58,7 +59,7 @@ const errorMessages: Record<string, { title: string; message: string }> = {
   },
 }
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams()
   const errorType = searchParams.get('error') || 'Default'
   const errorInfo = errorMessages[errorType] || errorMessages.Default
@@ -126,5 +127,17 @@ export default function AuthErrorPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#F8F8F8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#999' }}>Loading...</p>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   )
 }
