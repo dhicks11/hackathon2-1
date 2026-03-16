@@ -2,7 +2,6 @@
 import NextAuth from 'next-auth'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import Credentials from 'next-auth/providers/credentials'
-import MicrosoftEntraID from 'next-auth/providers/microsoft-entra-id'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
@@ -85,16 +84,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
   providers: [
-    // Microsoft SSO (Azure AD / Entra ID)
-    MicrosoftEntraID({
-      clientId: process.env.AZURE_AD_CLIENT_ID!,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID || 'common'}/v2.0`,
-      authorization: {
-        params: { scope: 'openid profile email User.Read' },
-      },
-      allowDangerousEmailAccountLinking: true,
-    }),
     // Email/Password credentials
     Credentials({
       name: 'credentials',

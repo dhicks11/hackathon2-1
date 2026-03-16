@@ -12,7 +12,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [ssoLoading, setSsoLoading] = useState<string | null>(null)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
   async function onSubmit(e: React.FormEvent) {
@@ -50,16 +49,6 @@ export default function RegisterPage() {
       setError(err.message ?? 'Registration failed')
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function handleSSOSignIn(provider: 'microsoft-entra-id') {
-    setSsoLoading(provider)
-    try {
-      await signIn(provider, { callbackUrl: '/dashboard' })
-    } catch (err) {
-      setError('SSO sign-up failed. Please try again.')
-      setSsoLoading(null)
     }
   }
 
@@ -144,65 +133,6 @@ export default function RegisterPage() {
           padding: '40px 36px',
           boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
-          {/* SSO Options */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
-            <button
-              onClick={() => handleSSOSignIn('microsoft-entra-id')}
-              disabled={ssoLoading !== null}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                padding: '14px 16px',
-                background: ssoLoading === 'microsoft-entra-id' ? '#F8F8F8' : '#fff',
-                border: '1.5px solid #E6E6E6',
-                borderRadius: 10,
-                cursor: ssoLoading ? 'not-allowed' : 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-                color: '#333',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseOver={e => { if (!ssoLoading) e.currentTarget.style.borderColor = '#CCC' }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = '#E6E6E6' }}
-            >
-              {ssoLoading === 'microsoft-entra-id' ? (
-                <span style={{ fontSize: 12 }}>...</span>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
-                  <path d="M10 0H0v10h10V0z" fill="#F25022"/>
-                  <path d="M21 0H11v10h10V0z" fill="#7FBA00"/>
-                  <path d="M10 11H0v10h10V11z" fill="#00A4EF"/>
-                  <path d="M21 11H11v10h10V11z" fill="#FFB900"/>
-                </svg>
-              )}
-              <span>Microsoft</span>
-            </button>
-
-          </div>
-
-          {/* Divider */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-            marginBottom: 28,
-          }}>
-            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #E6E6E6)' }} />
-            <span style={{
-              fontSize: 11,
-              color: '#BBB',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              fontWeight: 500,
-            }}>
-              or continue with email
-            </span>
-            <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, #E6E6E6, transparent)' }} />
-          </div>
-
           {/* Form */}
           <form onSubmit={onSubmit}>
             {/* Name Field */}
